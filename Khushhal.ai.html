@@ -1,0 +1,2625 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      html {
+        scroll-padding-top: env(safe-area-inset-top, 0px);
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font:
+          14px -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: #fff;
+        color: #000;
+      }
+      img {
+        max-width: 100%;
+      }
+      [hidden]:not([hidden="until-found" i]) {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <title>Khushhal.ai</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+    <style>
+      /* Layout: a framed chat app. Sidebar of topics, streaming thread in the middle, composer pinned below, ambient node network behind the thread. */
+      :root {
+        --bg: #eef0eb;
+        --panel: #f8f9f6;
+        --panel2: #e8ebe5;
+        --line: #d3d8d0;
+        --fg: #171c19;
+        --muted: #5d675f;
+        --accent: #a35f08;
+        --accent-fg: #ffffff;
+        --tool: #1f6b7d;
+        --ok: #2b7a4b;
+        --user-bg: #dfe4db;
+        --font-display:
+          "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+        --font-body:
+          "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+        --font-mono:
+          "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #0c0f0d;
+          --panel: #121714;
+          --panel2: #19201c;
+          --line: #26302a;
+          --fg: #e8ede9;
+          --muted: #8c978f;
+          --accent: #f0b24a;
+          --accent-fg: #1a1204;
+          --tool: #74bfd1;
+          --ok: #6fcf97;
+          --user-bg: #1c2420;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: #0c0f0d;
+        --panel: #121714;
+        --panel2: #19201c;
+        --line: #26302a;
+        --fg: #e8ede9;
+        --muted: #8c978f;
+        --accent: #f0b24a;
+        --accent-fg: #1a1204;
+        --tool: #74bfd1;
+        --ok: #6fcf97;
+        --user-bg: #1c2420;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-body);
+        font-size: 15px;
+        line-height: 1.55;
+        display: flex;
+        flex-direction: column;
+        padding-block: 12px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+      }
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .mono {
+        font-family: var(--font-mono);
+      }
+
+      .app {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        overflow: hidden;
+        position: relative;
+        max-width: 1200px;
+        width: 100%;
+        margin-inline: auto;
+      }
+
+      /* sidebar */
+      .side {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 16px 14px;
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+        min-height: 0;
+        min-width: 0;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 19px;
+        letter-spacing: -0.01em;
+      }
+      .av {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        flex: none;
+        background: var(--accent);
+        color: var(--accent-fg);
+        display: grid;
+        place-items: center;
+      }
+      .av svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+      }
+      .newchat {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 12px;
+        text-align: left;
+        font-weight: 500;
+      }
+      .newchat:hover {
+        border-color: var(--accent);
+      }
+      .label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .hist {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: 0;
+        overflow-y: auto;
+      }
+      .hist button {
+        background: transparent;
+        border: 0;
+        text-align: left;
+        padding: 8px 10px;
+        border-radius: 8px;
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        color: var(--fg);
+      }
+      .hist button:hover {
+        background: var(--panel2);
+      }
+      .hist .k {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted);
+        width: 3.2ch;
+        flex: none;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .meter {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .track {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--panel2);
+        overflow: hidden;
+      }
+      .track i {
+        display: block;
+        height: 100%;
+        width: 0%;
+        background: var(--accent);
+        transition: width 0.4s ease;
+      }
+      .meter .row {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .themebtn {
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 7px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+      }
+      .themebtn:hover {
+        border-color: var(--accent);
+      }
+
+      /* main */
+      .main {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+      }
+      #bg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        opacity: 0.55;
+      }
+      .top,
+      .scroll,
+      .composer {
+        position: relative;
+        z-index: 1;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--line);
+        background: color-mix(in srgb, var(--panel) 88%, transparent);
+      }
+      .menu {
+        display: none;
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 5px 10px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 11px;
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--ok);
+        box-shadow: 0 0 0 0 var(--ok);
+        animation: pulse 2.2s infinite;
+      }
+      @keyframes pulse {
+        70% {
+          box-shadow: 0 0 0 7px transparent;
+        }
+        100% {
+          box-shadow: 0 0 0 0 transparent;
+        }
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px;
+        margin-left: auto;
+      }
+      .seg button {
+        background: transparent;
+        border: 0;
+        border-radius: 999px;
+        padding: 3px 11px;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .seg button[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--accent-fg);
+        font-weight: 600;
+      }
+
+      .scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+      .thread {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 28px 18px 24px;
+      }
+      .hero {
+        padding-bottom: 8px;
+      }
+      .hero h1 {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: clamp(32px, 6vw, 54px);
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+        margin: 10px 0 14px;
+        text-wrap: balance;
+      }
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 56ch;
+      }
+      .hero code,
+      .hint code {
+        font-family: var(--font-mono);
+        font-size: 0.9em;
+        background: var(--panel2);
+        padding: 1px 6px;
+        border-radius: 5px;
+        color: var(--fg);
+      }
+
+      .msg {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .msg.user {
+        justify-content: flex-end;
+      }
+      .bubble {
+        background: var(--user-bg);
+        padding: 9px 14px;
+        border-radius: 14px 14px 4px 14px;
+        max-width: 80%;
+        overflow-wrap: anywhere;
+      }
+      .body {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .text {
+        margin: 0;
+        max-width: 65ch;
+      }
+      .caret {
+        display: inline-block;
+        width: 7px;
+        height: 1em;
+        background: var(--accent);
+        vertical-align: -0.15em;
+        margin-left: 2px;
+        animation: blink 1s steps(2) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .sys {
+        text-align: center;
+        margin-top: 22px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--muted);
+      }
+
+      .think {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .think summary {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        list-style: none;
+        padding: 2px 0;
+      }
+      .think summary::-webkit-details-marker {
+        display: none;
+      }
+      .think summary::before {
+        content: "\25B8";
+        display: inline-block;
+        transition: transform 0.15s;
+      }
+      .think[open] summary::before {
+        transform: rotate(90deg);
+      }
+      .think ul {
+        list-style: none;
+        margin: 4px 0 0;
+        padding: 0 0 0 14px;
+        border-left: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .think li {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .fn {
+        color: var(--tool);
+      }
+      .dots {
+        display: inline-flex;
+        gap: 3px;
+      }
+      .dots i {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: blink 0.9s infinite;
+      }
+      .dots i:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .dots i:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+
+      .comp {
+        animation: rise 0.45s ease both;
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 10px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        background: var(--panel2);
+        border-radius: 10px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .card h3 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+      .card .tag {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--tool);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .stack {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .stack span {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 1px 7px;
+      }
+      .card .foot {
+        margin-top: auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .metric {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--ok);
+      }
+      .ask {
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 3px 10px;
+        font-size: 12.5px;
+      }
+      .project-links {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+
+      .project-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 11px;
+        border-radius: 7px;
+        border: 1px solid var(--line);
+        color: var(--fg);
+        transition: all 0.2s ease;
+      }
+
+      /* ---------- Engineering deep dive ---------- */
+
+      .deep-dive {
+        width: 100%;
+        min-width: 0;
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .deep-head {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel2);
+      }
+
+      .deep-head .eyebrow {
+        color: var(--tool);
+        font: 11px var(--font-mono);
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+      }
+
+      .deep-head h2 {
+        margin: 7px 0;
+        font: 700 clamp(23px, 4vw, 32px)/1.1 var(--font-display);
+        letter-spacing: -0.035em;
+      }
+
+      .deep-head p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .deep-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .deep-section {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--panel);
+        min-width: 0;
+      }
+
+      .deep-section h3 {
+        margin: 0 0 12px;
+        font: 600 18px var(--font-display);
+      }
+
+      .deep-section .section-index {
+        color: var(--accent);
+        font: 11px var(--font-mono);
+        margin-right: 8px;
+      }
+
+      .deep-section p {
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .deep-list {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+
+      .deep-list li {
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+        color: var(--muted);
+        font-size: 13.5px;
+      }
+
+      .deep-list li::before {
+        content: "↳";
+        color: var(--accent);
+        font-family: var(--font-mono);
+        flex: none;
+      }
+
+      .arch-flow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .arch-node {
+        padding: 9px 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel2);
+        font: 11.5px var(--font-mono);
+        overflow-wrap: anywhere;
+      }
+
+      .arch-arrow {
+        color: var(--accent);
+        font-family: var(--font-mono);
+      }
+
+      .arch-note {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 12px !important;
+      }
+
+      .tech-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 9px;
+      }
+
+      .tech-box {
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel2);
+        min-width: 0;
+      }
+
+      .tech-box b {
+        display: block;
+        font: 12px var(--font-mono);
+        color: var(--tool);
+        margin-bottom: 5px;
+      }
+
+      .tech-box span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .deep-code {
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel2);
+        overflow-x: auto;
+        font: 12px/1.8 var(--font-mono);
+        color: var(--fg);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .deep-label {
+        font: 11px var(--font-mono);
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 9px;
+      }
+
+      .deep-status {
+        display: inline-block;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 3px 8px;
+        font: 10px var(--font-mono);
+        color: var(--ok);
+        margin-bottom: 10px;
+      }
+
+      @media (max-width: 520px) {
+        .deep-section {
+          padding: 12px;
+        }
+        .deep-head {
+          padding: 14px;
+        }
+        .arch-flow {
+          gap: 5px;
+        }
+        .arch-node {
+          font-size: 10px;
+          padding: 7px;
+        }
+      }
+
+      .project-link:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateY(-2px);
+      }
+
+      .project-link.primary {
+        background: var(--accent);
+        color: var(--accent-fg);
+        border-color: var(--accent);
+      }
+
+      .project-link.primary:hover {
+        opacity: 0.85;
+      }
+
+      .project-link.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+      .ask:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .profile {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        border: 1px solid var(--line);
+        background: var(--panel2);
+        border-radius: 12px;
+        padding: 16px;
+        flex-wrap: wrap;
+      }
+      .mark {
+        width: 64px;
+        height: 64px;
+        border-radius: 14px;
+        background: var(--accent);
+        color: var(--accent-fg);
+        display: grid;
+        place-items: center;
+        font-family: var(--font-display);
+        font-weight: 800;
+        font-size: 26px;
+        letter-spacing: -0.04em;
+        flex: none;
+      }
+      .profile h3 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 22px;
+        letter-spacing: -0.02em;
+      }
+      .profile .role {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .profile .tags {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .profile .tags span {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px 9px;
+      }
+      .profile > div {
+        min-width: 0;
+      }
+
+      .skills {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 12px;
+      }
+      .grp {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px;
+        background: var(--panel2);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 0;
+      }
+      .sk {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px 8px;
+        font-size: 13.5px;
+      }
+      .sk .v {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .sk .bar {
+        grid-column: 1 / -1;
+        height: 5px;
+        border-radius: 3px;
+        background: var(--line);
+        overflow: hidden;
+      }
+      .sk .bar i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--accent);
+        border-radius: 3px;
+        transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+      }
+      .sk .bar i.on {
+        width: var(--w);
+      }
+
+      .tline {
+        list-style: none;
+        margin: 0;
+        padding: 0 0 0 18px;
+        border-left: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .tline li {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .tline li::before {
+        content: "";
+        position: absolute;
+        left: -23px;
+        top: 6px;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .tline .when {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--muted);
+      }
+      .tline b {
+        font-family: var(--font-display);
+        font-size: 17px;
+        letter-spacing: -0.01em;
+        font-weight: 600;
+      }
+      .tline span.n {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .contact {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel2);
+        overflow: hidden;
+      }
+      .crow {
+        display: grid;
+        grid-template-columns: 84px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        padding: 11px 14px;
+        border-top: 1px solid var(--line);
+      }
+      .crow:first-child {
+        border-top: 0;
+      }
+      .crow .val {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+        user-select: all;
+      }
+      .copy {
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 3px 10px;
+        font-size: 12.5px;
+        min-width: 64px;
+      }
+      .copy:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .next {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        align-items: center;
+      }
+      .chip {
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 13px;
+        font-size: 13px;
+      }
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .composer {
+        padding: 10px 16px 14px;
+        border-top: 1px solid var(--line);
+        background: color-mix(in srgb, var(--panel) 92%, transparent);
+      }
+      .composer .in {
+        max-width: 780px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      form {
+        display: flex;
+        gap: 8px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 6px 6px 6px 14px;
+      }
+      form:focus-within {
+        border-color: var(--accent);
+      }
+      form input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        outline: none;
+        padding: 8px 0;
+      }
+      form input::placeholder {
+        color: var(--muted);
+      }
+      #send {
+        background: var(--accent);
+        color: var(--accent-fg);
+        border: 0;
+        border-radius: 9px;
+        padding: 0 16px;
+        font-weight: 600;
+        min-width: 74px;
+      }
+      .hint {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .scrim {
+        display: none;
+      }
+      @media (max-width: 780px) {
+        .app {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .menu {
+          display: inline-block;
+        }
+        .side {
+          position: absolute;
+          z-index: 6;
+          inset: 0 auto 0 0;
+          width: min(290px, 86%);
+          transform: translateX(-102%);
+          transition: transform 0.25s ease;
+          box-shadow: 0 0 40px rgba(0, 0, 0, 0.35);
+        }
+        .app.open .side {
+          transform: none;
+        }
+        .app.open .scrim {
+          display: block;
+          position: absolute;
+          inset: 0;
+          z-index: 5;
+          background: rgba(0, 0, 0, 0.35);
+        }
+        .seg {
+          margin-left: 0;
+        }
+        .crow {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .crow .label {
+          grid-column: 1 / -1;
+        }
+        .bubble {
+          max-width: 90%;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+
+    <div class="app" id="app">
+      <aside class="side" id="side">
+        <div class="brand">
+          <span class="av"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z"
+              /></svg
+          ></span>
+          <span>khushhal.ai</span>
+        </div>
+        <button class="newchat" id="newchat" type="button">
+          <span aria-hidden="true">+</span> New chat
+        </button>
+        <div class="label">Topics</div>
+        <nav class="hist" aria-label="Topics">
+          <button type="button" data-q="Who are you?">
+            <span class="k">/01</span>About
+          </button>
+          <button type="button" data-q="Show me your projects">
+            <span class="k">/02</span>Projects
+          </button>
+          <button type="button" data-q="What is your tech stack?">
+            <span class="k">/03</span>Skills
+          </button>
+          <button type="button" data-q="Walk me through your experience">
+            <span class="k">/04</span>Experience
+          </button>
+          <button type="button" data-q="How can I contact you?">
+            <span class="k">/05</span>Contact
+          </button>
+          <button type="button" data-q="Surprise me">
+            <span class="k">/06</span>Surprise me
+          </button>
+        </nav>
+        <div class="spacer"></div>
+        <div class="meter">
+          <div class="row">
+            <span>context window</span><span id="tokTxt">0 / 8,192</span>
+          </div>
+          <div class="track"><i id="tokBar"></i></div>
+        </div>
+        <button class="themebtn" id="theme" type="button">
+          <span>Theme</span><span class="mono" id="themeName">auto</span>
+        </button>
+      </aside>
+      <div class="scrim" id="scrim"></div>
+
+      <main class="main">
+        <canvas id="bg" aria-hidden="true"></canvas>
+        <header class="top">
+          <button class="menu" id="menu" type="button" aria-label="Open topics">
+            Topics
+          </button>
+          <span class="pill"><span class="dot"></span>open to work</span>
+          <span class="pill">khushhal-1</span>
+          <div class="seg" role="group" aria-label="Tone">
+            <button type="button" data-mode="recruiter" aria-pressed="true">
+              Recruiter
+            </button>
+            <button type="button" data-mode="engineer" aria-pressed="false">
+              Engineer
+            </button>
+            <button type="button" data-mode="friend" aria-pressed="false">
+              Friend
+            </button>
+          </div>
+        </header>
+
+        <div class="scroll" id="scroll">
+          <div class="thread" id="thread">
+            <section class="hero" id="hero">
+              <div class="label">
+                khushhal-1 &middot; portfolio model &middot; context cleared
+              </div>
+              <h1>Ask me anything about Khushhal.</h1>
+              <p>
+                I am a language model trained on one person's work. Pick a
+                topic, type a question, or try <code>ls projects</code>.
+              </p>
+            </section>
+          </div>
+        </div>
+
+        <div class="composer">
+          <div class="in">
+            <div class="next" id="chips">
+              <button class="chip" type="button" data-q="Show me your projects">
+                Show projects
+              </button>
+              <button
+                class="chip"
+                type="button"
+                data-q="What is your tech stack?"
+              >
+                What's your stack?
+              </button>
+              <button
+                class="chip"
+                type="button"
+                data-q="Walk me through your experience"
+              >
+                Career timeline
+              </button>
+              <button
+                class="chip"
+                type="button"
+                data-q="Are you available to hire?"
+              >
+                Hire Khushhal
+              </button>
+              <button class="chip" type="button" data-q="Surprise me">
+                Surprise me
+              </button>
+            </div>
+            <form id="form" autocomplete="off">
+              <input
+                id="q"
+                type="text"
+                placeholder="Ask about projects, skills, availability..."
+                aria-label="Message"
+              />
+              <button id="send" type="submit">Send</button>
+            </form>
+            <div class="hint">
+              Enter to send &middot; Enter again to skip the typing &middot;
+              <code>/</code> to focus &middot; try
+              <code>sudo hire khushhal</code>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        /* ---------- Edit this object to make the portfolio yours ---------- */
+        var DATA = {
+          name: "Khushhal Kumrawat",
+          initials: "KK",
+
+          role: "Developer · Builder · Tech Team Manager",
+
+          tags: [
+            "IIT (BHU) Varanasi",
+            "Full-Stack Development",
+            "AI/ML",
+            "Competitive Programming",
+          ],
+
+          about: {
+            recruiter:
+              "I'm Khushhal Kumrawat, a B.Tech student at IIT (BHU), Varanasi, who enjoys turning complex problems into practical software products.\n\nMy work spans full-stack engineering, AI-powered applications, developer tools and competitive programming. I've built products from scratch, worked across frontend and backend systems, and taken technical ownership of projects and teams.\n\nBeyond writing code, I enjoy understanding why things work, designing better systems and building products that people actually want to use.",
+
+            engineer:
+              "I enjoy engineering software from the ground up. My interests lie at the intersection of full-stack development, AI/ML and problem solving.\n\nI've worked with React, Node.js, Express, MongoDB, TypeScript, C++, REST APIs, authentication systems and AI integrations. My projects include an AI Resume Builder, PrepZen and CodeHabit.\n\nI care about architecture, clean implementation, performance and understanding the engineering decisions behind a product.",
+
+            friend:
+              "I'm Khushhal, an IIT BHU student who probably has another project idea before finishing the previous one.\n\nI like building things, solving problems, participating in coding contests and experimenting with technologies. Sometimes that means building an entire product just to understand how something works.\n\nCurrently balancing engineering, competitive programming, AI/ML and way too many ideas.",
+          },
+
+          projects: [
+            {
+              id: "resume",
+              name: "AI Resume Builder",
+              tag: "AI-powered SaaS",
+              desc: "An AI-powered resume platform that helps users create, customize and improve professional resumes with intelligent feedback.",
+              stack: [
+                "React",
+                "Node.js",
+                "Express",
+                "MongoDB",
+                "OpenAI",
+                "JWT",
+              ],
+              metric: "End-to-end MERN application",
+              detail:
+                "Built a complete AI-powered resume platform using the MERN stack. Implemented authentication, resume management, multiple templates, AI-powered content improvement and PDF generation. Integrated OpenAI for intelligent resume assistance and ImageKit for image handling. Also worked on public resume sharing and maintaining consistency between the editor preview and generated PDF.",
+              github: "https://github.com/khushhalkumrawat/AI-Resume-Builder",
+              live: "https://ai-resume-analyzer-khushhal.vercel.app",
+            },
+
+            {
+              id: "prepzen",
+              name: "PrepZen",
+              tag: "EdTech · AI",
+              desc: "A free JEE preparation platform bringing practice, study material, mock tests and personalized doubt solving together.",
+              stack: [
+                "React",
+                "TypeScript",
+                "Node.js",
+                "MongoDB",
+                "Groq API",
+                "AI",
+              ],
+              metric: "End-to-end EdTech platform",
+              detail:
+                "Built PrepZen, an AI-assisted JEE preparation platform designed to make quality preparation accessible. Features include Daily Practice Problems, study material, an AI doubt solver, NTA-style CBT mock tests, performance analysis and mistake identification. Implemented backend APIs, MongoDB persistence, authentication and AI integration. The long-term vision is to build a scalable free learning ecosystem for JEE aspirants.",
+              github: "https://github.com/khushhalkumrawat/PrepZen.git",
+              live: "https://prep-zen-kohl.vercel.app",
+            },
+
+            {
+              id: "codehabit",
+              name: "CodeHabit",
+              tag: "Developer Tools · CP",
+              desc: "A competitive programming platform inspired by modern online judges, built around solving, compiling and evaluating code.",
+              stack: [
+                "React",
+                "C++",
+                "Python",
+                "Prisma",
+                "PostgreSQL",
+                "Judge0",
+              ],
+              metric: "Online judge architecture",
+              detail:
+                "Developing a competitive programming platform with an integrated code editor, problem management and automatic judging. Worked on the backend architecture using Prisma and PostgreSQL, integrated Judge0 for code execution and used Monaco Editor for the coding experience. Implemented problem test cases, including hidden test cases, and function-based judging.",
+              github: "https://github.com/khushhalkumrawat/CodeHabit.git",
+            },
+
+            {
+              id: "project-management",
+              name: "Project Management",
+              tag: "Product Engineering",
+              desc: "Project planning, collaboration and execution through structured software development workflows.",
+              stack: ["React", "Node.js", "REST APIs", "Database"],
+              metric: "Product development",
+              detail:
+                "A project management initiative focused on organizing development workflows, tracking tasks and improving collaboration. Add the specific features and implementation details of your project here.",
+              github:
+                "https://github.com/khushhalkumrawat/ProjectMangement.git",
+            },
+          ],
+
+          skills: [
+            {
+              group: "Programming",
+              items: [
+                ["C++", 90],
+                ["JavaScript", 88],
+                ["TypeScript", 80],
+                ["Python", 70],
+                ["Data Structures & Algorithms", 90],
+              ],
+            },
+
+            {
+              group: "Full-Stack Engineering",
+              items: [
+                ["React.js", 88],
+                ["Node.js & Express", 85],
+                ["MongoDB", 82],
+                ["REST APIs", 85],
+                ["Git & GitHub", 85],
+              ],
+            },
+
+            {
+              group: "AI & Engineering",
+              items: [
+                ["AI API Integration", 80],
+                ["LLM Applications", 75],
+                ["Problem Solving", 90],
+                ["System Design", 65],
+                ["Machine Learning", 50],
+              ],
+            },
+          ],
+
+          experience: [
+            {
+              when: "2026",
+              title: "Tech Team Manager",
+              org: "Spardha '26 · IIT (BHU)",
+              note: "Managing the technical team for External Activities, coordinating development and execution with team members.",
+            },
+
+            {
+              when: "2026",
+              title: "Independent Product Developer",
+              org: "Personal Projects",
+              note: "Building AI-powered products, developer tools and full-stack applications from concept to deployment.",
+            },
+
+            {
+              when: "2025 – Present",
+              title: "B.Tech Student",
+              org: "IIT (BHU), Varanasi",
+              note: "Ceramic Engineering · Exploring software engineering, AI/ML and computational problem solving.",
+            },
+          ],
+
+          contact: [
+            ["Email", "khushhalkumrawat@gmail.com"],
+            ["GitHub", "github.com/khushhalkumrawat"],
+            ["LinkedIn", "linkedin.com/in/khushhal-kumrawat-017bb6390"],
+          ],
+
+          fun: [
+            "900+ DSA problems solved. Still convinced there's a more elegant solution.",
+            "Started building one project to learn something. Ended up building the entire product.",
+            "Favorite development cycle: Idea → Architecture → Code → Debug → Deploy → Repeat.",
+            "Competitive programming teaches you to think. Building products teaches you to execute.",
+            "Currently trying to balance IIT, engineering, AI/ML and an unreasonable number of project ideas.",
+          ],
+        };
+
+        var ENGINEERING = {
+          resume: {
+            subtitle:
+              "An end-to-end AI-powered resume creation and optimization platform.",
+            overview: [
+              "Built a resume creation platform that combines structured editing, reusable templates and AI-assisted content improvement.",
+              "The application separates the presentation layer, REST API, persistent resume data and external AI/media integrations.",
+              "The main engineering challenge is maintaining consistency between editable resume data, the live preview, generated PDFs and public resume pages.",
+            ],
+            stack: [
+              ["Frontend", "React, Vite, Tailwind CSS"],
+              ["Backend", "Node.js, Express.js"],
+              ["Database", "MongoDB, Mongoose"],
+              ["AI", "OpenAI API"],
+              ["Authentication", "JWT-based authentication"],
+              ["Media", "ImageKit"],
+              ["Editor", "Tiptap, dnd-kit"],
+              ["Document output", "PDF generation"],
+            ],
+            architecture: [
+              "React frontend",
+              "Express REST API",
+              "Authentication middleware",
+              "Resume services",
+              "MongoDB",
+              "OpenAI / ImageKit",
+            ],
+            architectureNote:
+              "The frontend communicates with the Express backend. The backend handles authorization, resume operations and external service integrations. MongoDB stores persistent resume data.",
+            flow: [
+              "User edits resume content in the React editor.",
+              "Frontend sends authenticated requests to the resume API.",
+              "Backend validates the request and identifies the authenticated user.",
+              "Resume data is created or updated in MongoDB.",
+              "The frontend renders the updated resume preview.",
+              "PDF and public-sharing endpoints expose the appropriate output.",
+            ],
+            data: [
+              "User: identity and authentication-related information.",
+              "Resume: owner reference, personal details, education, experience, projects, skills and template configuration.",
+              "Public resume: a shareable resume identifier used by public-facing routes.",
+            ],
+            apis: [
+              "POST /api/users — user-related operations.",
+              "Resume routes under /api/resumes — resume management.",
+              "POST /api/ai — AI-assisted resume operations.",
+              "GET /api/resumes/:resumeId/pdf — PDF output.",
+              "GET /api/resumes/pdf-data/:resumeId — PDF data retrieval.",
+              "GET /public/:resumeId — public resume access.",
+            ],
+            engineering: [
+              "Component-based React architecture keeps the editor, preview and templates independently manageable.",
+              "Structured resume data allows multiple templates to render the same underlying content.",
+              "JWT authentication protects user-specific resume operations.",
+              "Editor and preview synchronization is important to avoid inconsistencies in the final document.",
+              "PDF generation and public sharing are treated as separate output paths.",
+            ],
+            security: [
+              "Keep OpenAI credentials and ImageKit private credentials on the server.",
+              "Validate ownership before allowing access to or modification of a resume.",
+              "Validate resume IDs and request payloads.",
+              "Restrict public endpoints to intentionally shared resources.",
+              "Avoid returning internal errors or sensitive user information.",
+            ],
+            scale: [
+              "Cache or precompute expensive document-generation operations where appropriate.",
+              "Move expensive PDF generation to background jobs if demand increases.",
+              "Add pagination and indexing for large resume collections.",
+              "Use rate limits for AI endpoints to control abuse and API costs.",
+            ],
+            tradeoffs: [
+              "MongoDB offers flexibility for evolving resume structures, but schema validation remains important.",
+              "External AI services speed up development but introduce latency, cost and provider dependency.",
+              "Multiple templates improve customization but increase the need for consistent rendering and PDF testing.",
+            ],
+          },
+
+          prepzen: {
+            subtitle:
+              "A free JEE preparation platform combining practice, assessment and AI-assisted learning.",
+            overview: [
+              "PrepZen brings daily practice, study material, doubt solving, mock tests and performance analysis into one learning platform.",
+              "The application uses a React and TypeScript frontend, an Express backend and MongoDB persistence.",
+              "The central engineering problem is connecting the learning workflow with reliable assessment, result storage and useful performance feedback.",
+            ],
+            stack: [
+              ["Frontend", "React, TypeScript, Vite"],
+              ["Backend", "Node.js, Express.js"],
+              ["Database", "MongoDB"],
+              ["AI integration", "Groq API"],
+              ["API style", "REST"],
+              ["Deployment", "Vercel frontend and hosted backend"],
+            ],
+            architecture: [
+              "Student interface",
+              "React application",
+              "Express REST API",
+              "Authentication and authorization",
+              "MongoDB",
+              "Groq AI service",
+            ],
+            architectureNote:
+              "The student interface communicates with the backend through REST APIs. MongoDB stores application data, while the backend communicates with Groq for AI-powered doubt solving.",
+            flow: [
+              "Student opens a learning module in the React application.",
+              "Frontend requests the required data from the Express API.",
+              "Backend validates the request and checks authorization where required.",
+              "Backend reads or writes the corresponding MongoDB records.",
+              "For doubt solving, the backend forwards the question to Groq.",
+              "The result is returned to the frontend and displayed to the student.",
+            ],
+            data: [
+              "Question: subject, topic, difficulty, question type, options, correct answer, explanation, marks and publication status.",
+              "Test result: attempt information, submitted answers, score and performance data.",
+              "Student activity: information needed to display test history and analysis.",
+              "Published questions: student-facing question data, separated from administrative question management.",
+            ],
+            apis: [
+              "GET /api/health — backend health check.",
+              "GET /published — published question retrieval through the questions router.",
+              "Question administration routes — protected CRUD operations.",
+              "Test-result routes — attempt persistence and result retrieval.",
+              "AI doubt-solving routes — backend-mediated Groq integration.",
+            ],
+            engineering: [
+              "Question publication status separates draft content from student-facing content.",
+              "Administrative question operations use authentication and admin authorization.",
+              "Published-question responses should not expose correct answers or explanations before assessment submission.",
+              "Test attempts and results are persisted so users can revisit their performance.",
+              "Assessment logic accounts for correct answers, marks and negative marking.",
+              "Performance analysis can use stored attempts to identify weak topics and recurring mistakes.",
+            ],
+            security: [
+              "Groq API keys must remain in server-side environment variables.",
+              "Admin CRUD operations must require authentication and admin authorization.",
+              "Validate submitted answers and test identifiers on the backend.",
+              "Do not expose correct answers through student-facing question endpoints before the appropriate review stage.",
+              "Apply rate limits to AI endpoints and validate question length and input size.",
+              "Return safe error responses without exposing internal stack traces.",
+            ],
+            scale: [
+              "Add indexes for frequently queried student, test and question fields.",
+              "Cache static study material and frequently requested published content.",
+              "Use pagination for question banks and test history.",
+              "Move expensive analytics calculations to background processing as usage grows.",
+              "Track AI usage and introduce request limits to manage service costs.",
+            ],
+            tradeoffs: [
+              "MongoDB makes it easier to evolve question and test structures, but data consistency must be enforced carefully.",
+              "Groq provides a quick AI integration, but the application depends on external API availability and rate limits.",
+              "Server-side evaluation improves trust in results but requires careful validation of submitted answers.",
+              "A free learning platform needs cost-aware AI usage and efficient infrastructure.",
+            ],
+          },
+
+          codehabit: {
+            subtitle:
+              "An online coding platform built around problem solving, code execution and automated evaluation.",
+            overview: [
+              "CodeHabit aims to provide a coding environment where users can browse programming problems, write solutions and receive automated evaluation.",
+              "The application combines a browser-based editor, problem management, a backend and an external code execution service.",
+              "The most important engineering concern is safely executing untrusted user-submitted code without compromising the main application.",
+            ],
+            stack: [
+              ["Frontend", "React"],
+              ["Code editor", "Monaco Editor"],
+              ["Languages", "C++, Python"],
+              ["Backend", "Node.js and application APIs"],
+              ["Database ORM", "Prisma"],
+              ["Database", "PostgreSQL"],
+              ["Execution", "Judge0 integration"],
+            ],
+            architecture: [
+              "React coding interface",
+              "Application API",
+              "Problem and submission services",
+              "PostgreSQL via Prisma",
+              "Judge0 execution service",
+              "Submission result",
+            ],
+            architectureNote:
+              "The application backend manages users, problems and submissions. Judge0 handles code execution separately, keeping arbitrary code execution outside the main application server.",
+            flow: [
+              "User selects a problem and opens the coding interface.",
+              "React loads the problem statement and available language options.",
+              "User writes code in Monaco Editor and submits it.",
+              "Backend validates the submission and prepares the execution request.",
+              "The code is sent to Judge0 with the required language and test input.",
+              "Execution results are collected and evaluated.",
+              "The frontend displays the verdict and relevant execution information.",
+            ],
+            data: [
+              "Problem: title, description, difficulty, constraints, tags and test-case references.",
+              "Submission: user reference, problem reference, source code, language and submission status.",
+              "Test case: input, expected output and visibility configuration.",
+              "Execution result: verdict, execution status and available runtime information.",
+            ],
+            apis: [
+              "Problem APIs — retrieve and manage coding problems.",
+              "Submission APIs — create and retrieve submissions.",
+              "Execution integration — communicate with Judge0.",
+              "Result APIs — expose submission verdicts and execution information.",
+            ],
+            engineering: [
+              "Monaco Editor provides a familiar code-editing experience in the browser.",
+              "Prisma provides a structured data-access layer over PostgreSQL.",
+              "Problem metadata and submission records should be stored separately.",
+              "The execution lifecycle should handle queued, processing, completed and failed states.",
+              "Hidden test cases should remain server-side and must not be exposed to the browser.",
+              "Execution results should be mapped into clear verdicts such as Accepted, Wrong Answer and Runtime Error.",
+            ],
+            security: [
+              "Never execute arbitrary submitted code directly inside the main Express process.",
+              "Use Judge0 or another isolated execution environment with resource limits.",
+              "Keep private test cases and expected outputs on the server.",
+              "Validate language identifiers, source-code size and submission frequency.",
+              "Do not expose execution-service credentials in frontend code.",
+              "Apply time, memory and process limits to untrusted submissions.",
+            ],
+            scale: [
+              "Use a queue for submission processing when execution demand grows.",
+              "Store execution status so clients can poll or receive updates.",
+              "Index submissions by user, problem and creation time.",
+              "Cache problem statements and metadata.",
+              "Monitor execution latency, queue depth and external judge failures.",
+            ],
+            tradeoffs: [
+              "Using Judge0 avoids building a code sandbox from scratch, but introduces an external service dependency.",
+              "PostgreSQL is suitable for structured relationships between users, problems and submissions.",
+              "Asynchronous execution is more reliable for long-running submissions but makes the submission lifecycle more complex.",
+            ],
+          },
+
+          "project-management": {
+            subtitle:
+              "A project management application focused on organizing work and coordinating execution.",
+            overview: [
+              "The project focuses on organizing projects, tasks and collaboration through a centralized application.",
+              "The engineering challenge is maintaining consistent task state, user access and project-level data across the application.",
+              "The architecture information below reflects the known project technology context; individual feature implementations should be verified against the repository.",
+            ],
+            stack: [
+              ["Frontend", "React"],
+              ["Backend", "Node.js, Express.js"],
+              ["Database", "PostgreSQL"],
+              ["ORM", "Prisma"],
+              ["Authentication", "Clerk"],
+              ["Background workflows", "Inngest"],
+            ],
+            architecture: [
+              "React dashboard",
+              "Express application API",
+              "Clerk authentication",
+              "Prisma data layer",
+              "PostgreSQL",
+              "Inngest workflows",
+            ],
+            architectureNote:
+              "The frontend communicates with the application API. Clerk handles identity, Prisma provides database access, PostgreSQL stores structured application data and Inngest supports background workflows.",
+            flow: [
+              "User signs in through the authentication flow.",
+              "Frontend requests project or task data from the backend.",
+              "Backend verifies the user's identity and permissions.",
+              "Prisma executes the required database operations.",
+              "PostgreSQL persists project and task information.",
+              "Relevant background events can trigger Inngest workflows.",
+            ],
+            data: [
+              "User: identity and authentication reference.",
+              "Project: project details and ownership or membership relationships.",
+              "Task: task information, status and project relationship.",
+              "Additional entities and relationships should be confirmed from the Prisma schema.",
+            ],
+            apis: [
+              "Project APIs — project-related operations.",
+              "Task APIs — task creation and management.",
+              "Authentication integration — identity verification.",
+              "Background workflow events — asynchronous processing through Inngest.",
+            ],
+            engineering: [
+              "Prisma provides typed database queries and schema-based migrations.",
+              "PostgreSQL supports relational project and task data.",
+              "Authentication and application-level authorization should remain separate concerns.",
+              "Background workflows can handle work that should not block an API response.",
+              "The frontend should keep task state and server state synchronized.",
+            ],
+            security: [
+              "Verify authenticated identity on protected backend routes.",
+              "Check project membership and task permissions on the server.",
+              "Never rely only on frontend route protection.",
+              "Validate all incoming project and task data.",
+              "Keep service credentials and webhook secrets server-side.",
+            ],
+            scale: [
+              "Add indexes for project membership, task status and frequently queried fields.",
+              "Paginate large task lists.",
+              "Use background workflows for expensive asynchronous operations.",
+              "Monitor API latency and database query performance.",
+              "Use caching selectively for frequently accessed dashboard data.",
+            ],
+            tradeoffs: [
+              "PostgreSQL provides strong relational consistency, but requires deliberate schema design.",
+              "Prisma improves developer productivity, but complex queries may need performance review.",
+              "Background workflows improve responsiveness but introduce retry and idempotency concerns.",
+              "Clerk reduces the burden of building authentication infrastructure, but adds an external dependency.",
+            ],
+          },
+        };
+
+        /* ---------- helpers ---------- */
+        var $ = function (s) {
+          return document.querySelector(s);
+        };
+        var thread = $("#thread"),
+          scrollEl = $("#scroll"),
+          input = $("#q"),
+          form = $("#form"),
+          sendBtn = $("#send");
+        var reduce = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        var mode = "recruiter",
+          busy = false,
+          stopFlag = false,
+          tokens = 0,
+          pinned = true,
+          fast = false;
+        var MAX_TOK = 8192;
+
+        function h(tag, cls, html) {
+          var e = document.createElement(tag);
+          if (cls) e.className = cls;
+          if (html != null) e.innerHTML = html;
+          return e;
+        }
+        function esc(s) {
+          return String(s).replace(/[&<>"]/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+          });
+        }
+        function sleep(ms) {
+          return reduce || stopFlag || fast
+            ? Promise.resolve()
+            : new Promise(function (r) {
+                setTimeout(r, ms);
+              });
+        }
+        function toBottom() {
+          if (pinned) scrollEl.scrollTop = scrollEl.scrollHeight;
+        }
+        scrollEl.addEventListener("scroll", function () {
+          pinned =
+            scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight <
+            140;
+        });
+        function updateMeter() {
+          var t = Math.min(tokens, MAX_TOK);
+          $("#tokTxt").textContent = t.toLocaleString("en-US") + " / 8,192";
+          $("#tokBar").style.width = ((t / MAX_TOK) * 100).toFixed(1) + "%";
+        }
+
+        var SPARK =
+          '<span class="av"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z"/></svg></span>';
+
+        function addUser(text) {
+          var m = h("div", "msg user");
+          var b = h("div", "bubble");
+          b.textContent = text;
+          m.append(b);
+          thread.append(m);
+          toBottom();
+        }
+        function addAI() {
+          var m = h("div", "msg ai", SPARK);
+          var body = h("div", "body");
+          m.append(body);
+          thread.append(m);
+          toBottom();
+          return body;
+        }
+        function sys(text) {
+          thread.append(h("div", "sys", esc(text)));
+          toBottom();
+        }
+
+        /* ---------- streaming pieces ---------- */
+        async function think(body, steps) {
+          var d = h("details", "think");
+          var sum = h(
+            "summary",
+            "",
+            '<span class="dots"><i></i><i></i><i></i></span><span class="tl">Thinking</span>',
+          );
+          var ul = h("ul");
+          d.append(sum, ul);
+          d.open = true;
+          body.append(d);
+          for (var i = 0; i < steps.length; i++) {
+            ul.append(
+              h(
+                "li",
+                "",
+                '<span class="fn">' +
+                  esc(steps[i][0]) +
+                  "()</span><span>" +
+                  esc(steps[i][1]) +
+                  "</span>",
+              ),
+            );
+            toBottom();
+            await sleep(380);
+          }
+          var secs = (steps.length * 0.4 + 0.3).toFixed(1);
+          sum.querySelector(".tl").textContent =
+            "Thought for " + secs + "s · " + steps.length + " tool calls";
+          var dots = sum.querySelector(".dots");
+          if (dots) dots.remove();
+          d.open = false;
+        }
+
+        async function say(body, text) {
+          var paras = text.split("\n\n");
+          for (var p = 0; p < paras.length; p++) {
+            var el = h("p", "text");
+            var tn = document.createTextNode("");
+            var caret = h("span", "caret");
+            el.append(tn, caret);
+            body.append(el);
+            var words = paras[p].split(" ");
+            for (var i = 0; i < words.length; i++) {
+              tn.data += (i ? " " : "") + words[i];
+              tokens += 2;
+              if (i % 3 === 0) {
+                updateMeter();
+                toBottom();
+              }
+              await sleep(20 + Math.random() * 28);
+            }
+            caret.remove();
+            updateMeter();
+            toBottom();
+          }
+        }
+
+        /* ---------- components ---------- */
+        function projectCard(p) {
+          var c = h("div", "card");
+
+          var links = `
+    <div class="project-links">
+
+      ${
+        p.live
+          ? `
+        <a href="${esc(p.live)}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="project-link primary">
+           ↗ Live Demo
+        </a>
+      `
+          : ""
+      }
+
+      ${
+        p.github
+          ? `
+        <a href="${esc(p.github)}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="project-link">
+           ◈ GitHub
+        </a>
+      `
+          : ""
+      }
+
+    </div>
+  `;
+
+          c.innerHTML = `
+    <div class="tag">${esc(p.tag)}</div>
+
+    <h3>${esc(p.name)}</h3>
+
+    <p>${esc(p.desc)}</p>
+
+    <div class="stack">
+      ${p.stack
+        .map(function (s) {
+          return "<span>" + esc(s) + "</span>";
+        })
+        .join("")}
+    </div>
+
+    <div class="foot">
+      <span class="metric">${esc(p.metric)}</span>
+      <button class="ask" type="button"
+        data-q="Tell me more about ${esc(p.name)}">
+        Explore →
+      </button>
+    </div>
+
+    ${links}
+  `;
+
+          return c;
+        }
+
+        function engineeringComp(p) {
+          var d = ENGINEERING[p.id];
+
+          if (!d) {
+            return h(
+              "div",
+              "deep-section",
+              "Technical details are not available yet.",
+            );
+          }
+
+          var w = h("div", "deep-dive");
+
+          function section(index, title, content) {
+            var box = h("section", "deep-section");
+            box.innerHTML =
+              '<h3><span class="section-index">' +
+              index +
+              "</span>" +
+              esc(title) +
+              "</h3>";
+            box.append(content);
+            w.append(box);
+          }
+
+          function list(items) {
+            var ul = h("ul", "deep-list");
+            items.forEach(function (item) {
+              var li = h("li");
+              li.textContent = item;
+              ul.append(li);
+            });
+            return ul;
+          }
+
+          function flow(items) {
+            var box = h("div", "arch-flow");
+            items.forEach(function (item, index) {
+              var node = h("span", "arch-node");
+              node.textContent = item;
+              box.append(node);
+
+              if (index !== items.length - 1) {
+                box.append(h("span", "arch-arrow", "→"));
+              }
+            });
+            return box;
+          }
+
+          function tech(items) {
+            var grid = h("div", "tech-grid");
+
+            items.forEach(function (item) {
+              var box = h("div", "tech-box");
+              box.innerHTML =
+                "<b>" +
+                esc(item[0]) +
+                "</b>" +
+                "<span>" +
+                esc(item[1]) +
+                "</span>";
+              grid.append(box);
+            });
+
+            return grid;
+          }
+
+          var head = h("div", "deep-head");
+          head.innerHTML =
+            '<div class="eyebrow">Engineering case study / ' +
+            esc(p.id) +
+            "</div>" +
+            "<h2>" +
+            esc(p.name) +
+            "</h2>" +
+            "<p>" +
+            esc(d.subtitle) +
+            "</p>";
+
+          var actions = h("div", "deep-actions");
+
+          if (p.live) {
+            var live = h("a", "project-link primary", "↗ Live Demo");
+            live.href = p.live;
+            live.target = "_blank";
+            live.rel = "noopener noreferrer";
+            actions.append(live);
+          }
+
+          if (p.github) {
+            var github = h("a", "project-link", "◈ GitHub");
+            github.href = p.github;
+            github.target = "_blank";
+            github.rel = "noopener noreferrer";
+            actions.append(github);
+          }
+
+          head.append(actions);
+          w.append(head);
+
+          var overview = h("div");
+          overview.append(list(d.overview));
+          section("01", "Project Overview", overview);
+
+          section("02", "Technology Stack", tech(d.stack));
+
+          var architecture = h("div");
+          architecture.append(
+            h("div", "deep-label", "High-level system architecture"),
+            flow(d.architecture),
+            h("p", "arch-note", d.architectureNote),
+          );
+          section("03", "System Architecture", architecture);
+
+          var dataflow = h("div");
+          dataflow.append(
+            h("div", "deep-label", "Typical request lifecycle"),
+            list(d.flow),
+          );
+          section("04", "Request & Data Flow", dataflow);
+
+          section("05", "Database Design", list(d.data));
+
+          section("06", "API Design", list(d.apis));
+
+          section("07", "Engineering Decisions", list(d.engineering));
+
+          section("08", "Security & Reliability", list(d.security));
+
+          section("09", "Scalability & Performance", list(d.scale));
+
+          section("10", "Technical Trade-offs", list(d.tradeoffs));
+
+          var note = h("div", "deep-section");
+          note.innerHTML =
+            '<span class="deep-status">ENGINEERING NOTES</span>' +
+            "<p>Architecture explanations describe the design and engineering considerations of this project. " +
+            "Implementation-specific details should be verified against the current source code.</p>";
+          w.append(note);
+
+          return w;
+        }
+
+        function projectsComp() {
+          var w = h("div", "cards");
+          DATA.projects.forEach(function (p) {
+            w.append(projectCard(p));
+          });
+          return w;
+        }
+        function profileComp() {
+          return h(
+            "div",
+            "profile",
+            '<div class="mark">' +
+              esc(DATA.initials) +
+              "</div>" +
+              "<div><h3>" +
+              esc(DATA.name) +
+              '</h3><div class="role">' +
+              esc(DATA.role) +
+              "</div>" +
+              '<div class="tags">' +
+              DATA.tags
+                .map(function (t) {
+                  return "<span>" + esc(t) + "</span>";
+                })
+                .join("") +
+              "</div></div>",
+          );
+        }
+        function skillsComp() {
+          var w = h("div", "skills");
+          DATA.skills.forEach(function (g) {
+            var box = h(
+              "div",
+              "grp",
+              '<div class="label">' + esc(g.group) + "</div>",
+            );
+            g.items.forEach(function (it) {
+              box.append(
+                h(
+                  "div",
+                  "sk",
+                  "<span>" +
+                    esc(it[0]) +
+                    '</span><span class="v">' +
+                    it[1] +
+                    '%</span><div class="bar"><i style="--w:' +
+                    it[1] +
+                    '%"></i></div>',
+                ),
+              );
+            });
+            w.append(box);
+          });
+          setTimeout(
+            function () {
+              w.querySelectorAll(".bar i").forEach(function (i) {
+                i.classList.add("on");
+              });
+            },
+            reduce || fast ? 0 : 60,
+          );
+          return w;
+        }
+        function timelineComp() {
+          var ul = h("ul", "tline");
+          DATA.experience.forEach(function (e) {
+            ul.append(
+              h(
+                "li",
+                "",
+                '<span class="when">' +
+                  esc(e.when) +
+                  "</span><b>" +
+                  esc(e.title) +
+                  '</b><span class="n">' +
+                  esc(e.org) +
+                  " &middot; " +
+                  esc(e.note) +
+                  "</span>",
+              ),
+            );
+          });
+          return ul;
+        }
+        function contactComp() {
+          var w = h("div", "contact");
+          DATA.contact.forEach(function (c) {
+            var row = h(
+              "div",
+              "crow",
+              '<span class="label">' +
+                esc(c[0]) +
+                '</span><span class="val">' +
+                esc(c[1]) +
+                "</span>",
+            );
+            var b = h("button", "copy", "Copy");
+            b.type = "button";
+            b.addEventListener("click", function () {
+              var val = row.querySelector(".val");
+              function done() {
+                b.textContent = "Copied";
+                setTimeout(function () {
+                  b.textContent = "Copy";
+                }, 1400);
+              }
+              function select() {
+                var r = document.createRange();
+                r.selectNodeContents(val);
+                var s = window.getSelection();
+                s.removeAllRanges();
+                s.addRange(r);
+                b.textContent = "Selected";
+                setTimeout(function () {
+                  b.textContent = "Copy";
+                }, 1400);
+              }
+              try {
+                navigator.clipboard.writeText(c[1]).then(done, select);
+              } catch (e) {
+                select();
+              }
+            });
+            row.append(b);
+            w.append(row);
+          });
+          return w;
+        }
+
+        /* ---------- intents ---------- */
+        function pick(a) {
+          return a[Math.floor(Math.random() * a.length)];
+        }
+        function nextChips(list) {
+          var w = h("div", "next comp", '<span class="label">Ask next</span>');
+          list.forEach(function (q) {
+            var b = h("button", "chip");
+            b.type = "button";
+            b.dataset.q = q;
+            b.textContent = q;
+            w.append(b);
+          });
+          return w;
+        }
+
+        function answer(q) {
+          var s = q.toLowerCase();
+          var proj = DATA.projects.filter(function (p) {
+            return s.indexOf(p.name.toLowerCase()) > -1 || s.indexOf(p.id) > -1;
+          })[0];
+          if (/sudo/.test(s)) {
+            return {
+              steps: [
+                ["sudo", "hire --force khushhal"],
+                ["auth", "recruiter, password accepted"],
+              ],
+              text: "[sudo] password for recruiter: ********\n\nPermission granted. Khushhal has been added to your team in spirit. To make it official, the contact card below is the fastest route.",
+              comp: contactComp,
+              next: [
+                "Walk me through your experience",
+                "Show me your projects",
+              ],
+            };
+          }
+          if (proj) {
+            return {
+              steps: [
+                ["load_project", "project=" + proj.id],
+                ["inspect_architecture", "stack, components, data flow"],
+                ["review_engineering", "security, scalability, tradeoffs"],
+              ],
+              text:
+                "Let's go beyond the feature list. Here's the engineering breakdown of " +
+                proj.name +
+                ", including its architecture, technology choices and important system design considerations.",
+              comp: function () {
+                return engineeringComp(proj);
+              },
+              next: [
+                "Show me your projects",
+                "What engineering challenges did you face?",
+                "How would you scale this project?",
+              ],
+            };
+          }
+          if (/\bls\b|project|built|build|portfolio|show|work\b/.test(s)) {
+            return {
+              steps: [
+                ["list_projects", "limit=4"],
+                ["rank", "by relevance to AI products"],
+              ],
+              text: "Here are four things Khushhal has built. Each one started as a problem he had himself, which is why they are small and sharp instead of big and vague.",
+              comp: projectsComp,
+              next: [
+                "Tell me more about Neuron Notes",
+                "What is your tech stack?",
+                "Are you available to hire?",
+              ],
+            };
+          }
+          if (/skill|stack|tech|tool|language|know|framework/.test(s)) {
+            return {
+              steps: [
+                ["load_skills", "groups=3"],
+                ["calibrate", "self-rating, honest mode"],
+              ],
+              text: "Khushhal's strongest ground is the frontend and the glue between it and a model. Bars are self-rated, so treat them as a conversation starter, not a verdict.",
+              comp: skillsComp,
+              next: [
+                "Show me your projects",
+                "Walk me through your experience",
+              ],
+            };
+          }
+          if (
+            /experience|career|job|resume|cv|history|background|timeline|work history/.test(
+              s,
+            )
+          ) {
+            return {
+              steps: [
+                ["fetch_timeline", "order=desc"],
+                ["compress", "keep what matters"],
+              ],
+              text: "Newest first. The thread running through all of it is shipping things real people use.",
+              comp: timelineComp,
+              next: ["Show me your projects", "Are you available to hire?"],
+            };
+          }
+          if (
+            /hire|available|availability|opportunit|freelance|open to/.test(s)
+          ) {
+            var t =
+              mode === "recruiter"
+                ? "Yes. Khushhal is open to full-time roles and selected freelance projects. He works best with small, product-minded teams that care about quality and move fast.\n\nThe quickest way to start a conversation is a short email with the problem you are trying to solve."
+                : mode === "engineer"
+                  ? "Open to work. He is most useful on products where the interface and the model have to cooperate: streaming, retrieval, evals, and the unglamorous plumbing between them.\n\nSend a repo link or a problem statement and he will respond with questions, not a template."
+                  : "He is around! Tell him what you are building and what is stuck. He would rather hear about the messy real problem than a polished job description.";
+            return {
+              steps: [
+                ["check_calendar", "next 30 days"],
+                ["tone", "mode=" + mode],
+              ],
+              text: t,
+              comp: contactComp,
+              next: [
+                "Show me your projects",
+                "Walk me through your experience",
+              ],
+            };
+          }
+          if (
+            /contact|email|reach|connect|talk|social|github|linkedin|message/.test(
+              s,
+            )
+          ) {
+            return {
+              steps: [["get_contact", "public only"]],
+              text: "Here is where to find Khushhal. Copy what you need.",
+              comp: contactComp,
+              next: ["Are you available to hire?", "Show me your projects"],
+            };
+          }
+          if (/surprise|joke|fun|hobb|random|secret|boring|lol/.test(s)) {
+            return {
+              steps: [
+                ["sample", "temperature=1.2"],
+                ["filter", "safe for work"],
+              ],
+              text: pick(DATA.fun),
+              comp: null,
+              next: ["Surprise me", "Show me your projects"],
+            };
+          }
+          if (/who|about|yourself|intro|^hi\b|hello|^hey\b/.test(s)) {
+            return {
+              steps: [
+                ["recall", "profile.core"],
+                ["tone", "mode=" + mode],
+              ],
+              text: DATA.about[mode],
+              comp: profileComp,
+              next: [
+                "Show me your projects",
+                "What is your tech stack?",
+                "Are you available to hire?",
+              ],
+            };
+          }
+          if (/help|command|\?$/.test(s)) {
+            return {
+              steps: [["list_commands", ""]],
+              text: "Ask in plain English or use shortcuts: ls projects, skills, timeline, contact, sudo hire khushhal. The tone switch at the top changes how I describe Khushhal.",
+              comp: null,
+              next: [
+                "Show me your projects",
+                "What is your tech stack?",
+                "How can I contact you?",
+                "Surprise me",
+              ],
+            };
+          }
+          return {
+            steps: [
+              ["search_knowledge", 'query="' + q.slice(0, 28) + '"'],
+              ["confidence", "low"],
+            ],
+            text: "I only know about Khushhal, and I could not match that to anything I have. Here are things I can answer well.",
+            comp: null,
+            next: [
+              "Who are you?",
+              "Show me your projects",
+              "What is your tech stack?",
+              "How can I contact you?",
+            ],
+          };
+        }
+
+        /* ---------- conversation loop ---------- */
+        function setBusy(b) {
+          busy = b;
+          sendBtn.textContent = b ? "Skip" : "Send";
+        }
+        async function play(q) {
+          setBusy(true);
+          stopFlag = false;
+          pinned = true;
+          addUser(q);
+          tokens += q.split(/\s+/).length * 2;
+          updateMeter();
+          var body = addAI();
+          var r = answer(q);
+          await think(body, r.steps);
+          await say(body, r.text);
+          if (r.comp) {
+            var c = r.comp();
+            c.classList.add("comp");
+            body.append(c);
+            tokens += 40;
+            updateMeter();
+            toBottom();
+            await sleep(250);
+          }
+          body.append(nextChips(r.next));
+          toBottom();
+          stopFlag = false;
+          setBusy(false);
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          if (busy) {
+            stopFlag = true;
+            return;
+          }
+          var q = input.value.trim();
+          if (!q) return;
+          input.value = "";
+          play(q);
+        });
+        document.addEventListener("click", function (e) {
+          var t = e.target.closest("[data-q]");
+          if (!t) return;
+          $("#app").classList.remove("open");
+          if (busy) {
+            stopFlag = true;
+            return;
+          }
+          play(t.dataset.q);
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "/" && document.activeElement !== input) {
+            e.preventDefault();
+            input.focus();
+          }
+          if (e.key === "Escape") $("#app").classList.remove("open");
+        });
+
+        /* sidebar, tone, theme */
+        $("#menu").addEventListener("click", function () {
+          $("#app").classList.add("open");
+        });
+        $("#scrim").addEventListener("click", function () {
+          $("#app").classList.remove("open");
+        });
+        document.querySelectorAll(".seg button").forEach(function (b) {
+          b.addEventListener("click", function () {
+            mode = b.dataset.mode;
+            document.querySelectorAll(".seg button").forEach(function (x) {
+              x.setAttribute("aria-pressed", String(x === b));
+            });
+            sys(
+              "Tone set to " +
+                mode +
+                '. Ask "Who are you?" again to hear the difference.',
+            );
+          });
+        });
+        $("#newchat").addEventListener("click", function () {
+          if (busy) stopFlag = true;
+          Array.prototype.slice.call(thread.children).forEach(function (c) {
+            if (c.id !== "hero") c.remove();
+          });
+          tokens = 0;
+          updateMeter();
+          $("#app").classList.remove("open");
+          scrollEl.scrollTop = 0;
+        });
+        function effectiveTheme() {
+          return (
+            document.documentElement.dataset.theme ||
+            (window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light")
+          );
+        }
+        $("#theme").addEventListener("click", function () {
+          var next = effectiveTheme() === "dark" ? "light" : "dark";
+          document.documentElement.dataset.theme = next;
+          $("#themeName").textContent = next;
+          refreshColor();
+        });
+        $("#themeName").textContent = effectiveTheme();
+
+        var phs = [
+          "Ask about projects, skills, availability...",
+          "Try: ls projects",
+          "Try: sudo hire khushhal",
+          "Try: what did you build with RAG?",
+          "Try: surprise me",
+        ];
+        var pi = 0;
+        setInterval(function () {
+          if (document.activeElement === input || input.value) return;
+          pi = (pi + 1) % phs.length;
+          input.placeholder = phs[pi];
+        }, 3200);
+
+        /* ---------- ambient node network ---------- */
+        var cv = $("#bg"),
+          cx = cv.getContext("2d");
+        var W = 0,
+          H = 0,
+          nodes = [],
+          mx = -999,
+          my = -999,
+          col = "#f0b24a",
+          frame = 0;
+        function refreshColor() {
+          var v = getComputedStyle(document.documentElement)
+            .getPropertyValue("--accent")
+            .trim();
+          if (v) col = v;
+        }
+        function size() {
+          var r = cv.parentElement.getBoundingClientRect();
+          var d = Math.min(window.devicePixelRatio || 1, 2);
+          W = r.width;
+          H = r.height;
+          cv.width = W * d;
+          cv.height = H * d;
+          cx.setTransform(d, 0, 0, d, 0, 0);
+          var n = Math.round(Math.min(70, (W * H) / 15000));
+          nodes = [];
+          for (var i = 0; i < n; i++) {
+            nodes.push({
+              x: Math.random() * W,
+              y: Math.random() * H,
+              vx: (Math.random() - 0.5) * 0.25,
+              vy: (Math.random() - 0.5) * 0.25,
+            });
+          }
+          if (reduce) draw();
+        }
+        function draw() {
+          cx.clearRect(0, 0, W, H);
+          cx.fillStyle = col;
+          cx.strokeStyle = col;
+          for (var i = 0; i < nodes.length; i++) {
+            var a = nodes[i];
+            for (var j = i + 1; j < nodes.length; j++) {
+              var b = nodes[j],
+                dx = a.x - b.x,
+                dy = a.y - b.y,
+                d2 = dx * dx + dy * dy;
+              if (d2 < 12100) {
+                cx.globalAlpha = (1 - d2 / 12100) * 0.22;
+                cx.lineWidth = 1;
+                cx.beginPath();
+                cx.moveTo(a.x, a.y);
+                cx.lineTo(b.x, b.y);
+                cx.stroke();
+              }
+            }
+            var mdx = a.x - mx,
+              mdy = a.y - my,
+              md2 = mdx * mdx + mdy * mdy;
+            if (md2 < 22500) {
+              cx.globalAlpha = (1 - md2 / 22500) * 0.6;
+              cx.beginPath();
+              cx.moveTo(a.x, a.y);
+              cx.lineTo(mx, my);
+              cx.stroke();
+            }
+            cx.globalAlpha = 0.55;
+            cx.beginPath();
+            cx.arc(a.x, a.y, 1.6, 0, 6.2832);
+            cx.fill();
+          }
+          cx.globalAlpha = 1;
+        }
+        function tick() {
+          frame++;
+          if (frame % 90 === 1) refreshColor();
+          for (var i = 0; i < nodes.length; i++) {
+            var n = nodes[i];
+            n.x += n.vx;
+            n.y += n.vy;
+            if (n.x < 0 || n.x > W) n.vx *= -1;
+            if (n.y < 0 || n.y > H) n.vy *= -1;
+          }
+          draw();
+          requestAnimationFrame(tick);
+        }
+        var mainEl = $(".main");
+        mainEl.addEventListener("pointermove", function (e) {
+          var r = cv.getBoundingClientRect();
+          mx = e.clientX - r.left;
+          my = e.clientY - r.top;
+        });
+        mainEl.addEventListener("pointerleave", function () {
+          mx = my = -999;
+        });
+        refreshColor();
+        if (window.ResizeObserver) new ResizeObserver(size).observe(mainEl);
+        else {
+          window.addEventListener("resize", size);
+        }
+        size();
+        if (!reduce) requestAnimationFrame(tick);
+
+        /* ---------- opening conversation, rendered at rest ---------- */
+        (async function seed() {
+          fast = true;
+          pinned = false;
+          await play("Who are you?");
+          fast = false;
+          scrollEl.scrollTop = 0;
+          pinned = true;
+        })();
+      })();
+    </script>
+  </body>
+</html>
